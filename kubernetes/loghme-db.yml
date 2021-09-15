@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: loghme-db
+  namespace: kimia-zahra-ns
+spec:
+  ports:
+  - port: 3306
+  selector:
+    app: loghme-db
+---
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: loghme-db
+spec:
+  selector:
+    matchLabels:
+      app: loghme-db
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: loghme-db
+    spec:
+      containers:
+      - image: mysql:5.7.16
+        name: loghme-db
+        env:
+          # Use secret in real usage
+        - name: "MYSQL_ROOT_PASSWORD"
+          valueFrom:                # Read environment variables from kubernetes secrets
+            secretKeyRef:
+              name: mysql-root-pass
+              key: password
+        - name: "MYSQL_DATABASE"
+          valueFrom:
+            secretKeyRef:
+              name: mysql-db-url
+              key: database
+        ports:
+        - containerPort: 3306
+          name: loghme-db
+        resources:
+            limits:
+              memory: "250Mi"
+              cpu: "250m"
+            requests:
+              memory: "200Mi"
+              cpu: "170m"
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+          subPath: kimiazahra-mysql
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-pv-claim
+
